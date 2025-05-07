@@ -6,10 +6,273 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
+  id                 Int                 @id @default(autoincrement())
+  email              String              @unique
+  password           String
+  username           String              @unique
+  name               String
+  provider           String              @default("email")
+  providerId         String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  sessions           Session[]
+  boardMemberships   BoardMember[]
+  ownedCards         Card[]              @relation("CardOwner")
+  comments           Comment[]
+  activities         Activity[]
+  notifications      Notification[]
+  notificationPrefs  NotificationPrefs?
+  favoriteBoards     FavoriteBoard[]
+}
+
+model Session {
+  id         String      @id @default(uuid())
+
+  ip          String? @default("unknown")
+  location    String? @default("unknown")
+  device_os   String? @default("unknown") @map("device_os")
+  device_name String? @default("unknown") @map("device_name")
+  device_type String? @default("unknown") @map("device_type")
+  browser     String? @default("unknown")
+  userAgent   String? @default("unknown")
+  refresh_token String @db.Text @map("refresh_token")
+  
+  userId     Int      @map("userId")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Board {
+  id           Int             @id @default(autoincrement())
+  name         String
+  description  String?
+  isArchived   Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  members      BoardMember[]
+  lists        List[]
+  activities   Activity[]
+  favorites    FavoriteBoard[]
+}
+
+model FavoriteBoard {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
+  userId    Int
+  boardId   Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boardId])
+  @@index([userId])
+  @@index([boardId])
+}
+
+model BoardMember {
+  id        Int      @id @default(autoincrement())
+  boardId   Int
+  userId    Int
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boardId])
+  @@index([boardId])
+  @@index([userId])
+}
+
+model List {
+  id          Int       @id @default(autoincrement())
+  name        String
+  position    Int
+  boardId     Int
+  isArchived  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  board       Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards       Card[]
+  activities  Activity[]
+
+  @@index([boardId])
+}
+
+model Card {
+  id            Int          @id @default(autoincrement())
+  title         String
+  description   String?
+  position      Int
+  listId        Int
+  ownerId       Int?
+  state         CardState    @default(TODO)
+  dueDate       DateTime?
+  isArchived    Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  list          List         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  owner         User?        @relation("CardOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  attachments   Attachment[]
+  comments      Comment[]
+  checklists    Checklist[]
+  activities    Activity[]
+
+  @@index([listId])
+  @@index([ownerId])
+}
+
+model Attachment {
+  id          Int       @id @default(autoincrement())
+  cardId      Int
+  filename    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  createdAt   DateTime  @default(now())
+  card        Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+model Comment {
+  id          Int       @id @default(autoincrement())
+  cardId      Int
+  userId      Int
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  card        Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+  @@index([userId])
+}
+
+model Checklist {
+  id           Int              @id @default(autoincrement())
+  cardId       Int
+  title        String
+  position     Int
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  card         Card             @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  items        ChecklistItem[]
+
+  @@index([cardId])
+}
+
+model ChecklistItem {
+  id           Int          @id @default(autoincrement())
+  checklistId  Int
+  content      String
+  isCompleted  Boolean      @default(false)
+  position     Int
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  checklist    Checklist    @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+}
+
+model Activity {
+  id          Int           @id @default(autoincrement())
+  type        ActivityType
+  userId      Int
+  boardId     Int?
+  listId      Int?
+  cardId      Int?
+  data        Json?
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board       Board?        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  list        List?         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  card        Card?         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([boardId])
+  @@index([listId])
+  @@index([cardId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean           @default(false)
+  data        Json?
+  createdAt   DateTime          @default(now())
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model NotificationPrefs {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
+  emailEnabled      Boolean   @default(true)
+  inAppEnabled      Boolean   @default(true)
+  cardAssigned      Boolean   @default(true)
+  cardCommented     Boolean   @default(true)
+  cardDueSoon       Boolean   @default(true)
+  boardInvited      Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+enum CardState {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  ARCHIVED
+}
+
+enum ActivityType {
+  CARD_CREATED
+  CARD_UPDATED
+  CARD_MOVED
+  CARD_DELETED
+  CARD_ASSIGNED
+  CARD_UNASSIGNED
+  CARD_STATE_CHANGED
+  CARD_COMMENT_ADDED
+  CARD_ATTACHMENT_ADDED
+  LIST_CREATED
+  LIST_UPDATED
+  LIST_DELETED
+  LIST_MOVED
+  BOARD_CREATED
+  BOARD_UPDATED
+  BOARD_DELETED
+  BOARD_MEMBER_ADDED
+  BOARD_MEMBER_REMOVED
+  BOARD_MEMBER_ROLE_CHANGED
+}
+
+enum NotificationType {
+  CARD_ASSIGNED
+  CARD_DUE_SOON
+  CARD_COMMENTED
+  BOARD_INVITED
+  MENTION
 }

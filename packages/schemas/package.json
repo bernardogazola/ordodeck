@@ -1,0 +1,16 @@
+{
+  "name": "@repo/schemas",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.8.3"
+  },
+  "exports": {
+    ".": "./index.ts"
+  }
+}

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@repo/ui/globals.css";
-import { ThemeProvider } from "@repo/ui/providers/theme-provider";
 import { Toaster } from "@repo/ui/components/sonner";
+import { Providers } from "@/components/providers/providers";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -14,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Turbo-nest-prisma starter",
-  description: "Turbo-nest-prisma starter kit",
+  title: "Ordodeck",
+  description: "Ordodeck",
 };
 
 export default function RootLayout({
@@ -24,20 +25,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-          enableColorScheme
-        >
-          {children}
-          <Toaster richColors />
-        </ThemeProvider>
+        <Providers>
+          <QueryProvider>
+            {children}
+            <Toaster richColors />
+          </QueryProvider>
+        </Providers>
       </body>
     </html>
   );
