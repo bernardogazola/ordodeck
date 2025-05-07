@@ -8,6 +8,7 @@ const ROUTES = {
     SECURITY: "/profile/security",
     SESSIONS: "/profile/sessions",
   },
+  BOARDS: "/boards",
 };
 
 export default ROUTES;

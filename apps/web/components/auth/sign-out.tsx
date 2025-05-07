@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useToast } from "@repo/ui/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import ROUTES from "@/constants/routes";
+
 const SignOut = () => {
   const router = useRouter();
   const { toast } = useToast();
